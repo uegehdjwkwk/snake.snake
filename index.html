@@ -81,6 +81,7 @@
 </div>
 <div id="btns"><button class="btn" id="restart">Играть</button><button class="btn alt" id="shopBtn">Магазин</button>
   <button class="btn sm" id="ctrlBtn"></button>
+  <button class="btn sm" id="musicBtn"></button>
   <button class="btn sm" id="dpadBtn">Настроить стрелки</button></div>
 <div id="dpadEdit">
   <div class="row"><span>Размер <b id="dpadSel">▲</b></span><input type="range" id="dpadSize" min="50" max="220" step="5"></div>
@@ -89,7 +90,7 @@
 
 <button id="pauseBtn" aria-label="Пауза"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="5" height="18" rx="1.5"/><rect x="14" y="3" width="5" height="18" rx="1.5"/></svg></button>
 <div id="pause"><div class="box"><div class="t">Пауза</div>
-  <button class="btn" id="resumeBtn">Продолжить</button><button class="btn sm" id="quitBtn">Закончить игру</button></div></div>
+  <button class="btn" id="resumeBtn">Продолжить</button><button class="btn sm" id="musicBtn2"></button><button class="btn sm" id="quitBtn">Закончить игру</button></div></div>
 
 <div id="shop">
   <div id="shopHead"><b>Магазин</b><span>🍎 <b id="shopCoins">0</b></span><button id="closeShop">✕</button></div>
@@ -113,7 +114,18 @@ const SNAKES = [
   {n: 'Неон',     p: 130, o: ['#006c8a', '#7a0f6a'], b: ['#00f0ff', '#ff2bd6'], glow: '#00f0ff', head: '#b6ffff', dot: 'rgba(0,0,0,.25)'},
   {n: 'Радуга',   p: 160, mode: 'rainbow', glow: '#ffffff', dot: 'rgba(0,0,0,.2)'},
   {n: 'Призрак',  p: 200, o: '#8fa2c8', b: '#e8f0ff', glow: '#bcd0ff', head: '#ffffff', dot: 'rgba(120,140,190,.35)'},
-  {n: 'Космос',   p: 250, o: ['#3a1fa0', '#120a40'], b: ['#7b4dff', '#2a1a7a'], glow: '#8f6bff', head: '#b79bff', dot: 'rgba(255,255,255,.85)', every: 2, dotR: .55}
+  {n: 'Космос',   p: 250, o: ['#3a1fa0', '#120a40'], b: ['#7b4dff', '#2a1a7a'], glow: '#8f6bff', head: '#b79bff', dot: 'rgba(255,255,255,.85)', every: 2, dotR: .55},
+  {n: 'Мята',       p: 45,  o: ['#3a9c7c', '#2a7a62'], b: ['#c9ffe9', '#5fe0b4'], glow: '#9bf5d2', head: '#e4fff4', dot: 'rgba(30,110,85,.3)'},
+  {n: 'Леденец',    p: 70,  mode: 'stripe', o: '#b8204a', b: ['#ff3d6e', '#ffffff'], glow: '#ff7aa0', head: '#ff6f93'},
+  {n: 'Зебра',      p: 90,  mode: 'stripe', o: '#0e0e0e', b: ['#f4f4f4', '#1c1c1c'], glow: '#ffffff', head: '#ececec'},
+  {n: 'Закат',      p: 110, o: ['#a8681a', '#5a1a5a'], b: ['#ffd24a', '#c2308a'], glow: '#ff8a5a', head: '#ffe08a', dot: 'rgba(90,20,70,.3)'},
+  {n: 'Лёд',        p: 140, o: ['#4a8fc7', '#2a5a9a'], b: ['#eefcff', '#8fd8ff'], glow: '#bff0ff', head: '#ffffff', dot: 'rgba(60,120,190,.3)'},
+  {n: 'Ядовитая',   p: 170, o: ['#3a4a00', '#1f2a00'], b: ['#c6ff00', '#5f9e00'], glow: '#b6ff00', head: '#e6ff7a', dot: 'rgba(30,50,0,.4)'},
+  {n: 'Сумерки',    p: 200, o: ['#5a2aa0', '#241070'], b: ['#d08aff', '#5a3cff'], glow: '#b38bff', head: '#e6c8ff', dot: 'rgba(255,255,255,.35)', every: 2, dotR: .6},
+  {n: 'Коралловая', p: 230, mode: 'stripe', o: '#1a1a1a', b: ['#e02020', '#f2e03a', '#1a1a1a', '#f2e03a'], glow: '#ff5a3a', head: '#e8362a'},
+  {n: 'Оникс',      p: 280, o: ['#0a0a12', '#05050a'], b: ['#4a4a62', '#14141c'], glow: '#a06bff', head: '#6a6a88', dot: 'rgba(160,107,255,.55)', every: 2, dotR: .7},
+  {n: 'Хамелеон',   p: 330, mode: 'cham', glow: '#7aff9a', dot: 'rgba(0,40,20,.25)'},
+  {n: 'Огненная',   p: 400, mode: 'fire', glow: '#ff7a1a', dot: 'rgba(90,10,0,.3)'}
 ];
 const APPLES = [
   {n: 'Яблоко',       p: 0,   glow: '#ff6b4a', sp: [255, 190, 90]},
@@ -213,7 +225,7 @@ function norm(s) {
     ownS: Array.isArray(s.ownS) ? s.ownS : [0], ownA: Array.isArray(s.ownA) ? s.ownA : [0],
     selS: +s.selS || 0, selA: +s.selA || 0,
     ownB: Array.isArray(s.ownB) ? s.ownB : [0], selB: +s.selB || 0,
-    ctrl: s.ctrl === 'arrows' ? 'arrows' : 'swipe'};
+    ctrl: s.ctrl === 'arrows' ? 'arrows' : 'swipe', music: s.music !== false};
   if (!o.ownS.includes(0)) o.ownS.push(0);
   if (!o.ownA.includes(0)) o.ownA.push(0);
   if (!o.ownS.includes(o.selS)) o.selS = 0;
@@ -244,7 +256,7 @@ refreshUI();
 if (CS) try {
   CS.getItem('snake_save', (err, val) => {
     if (err || !val) return;
-    try { const c = norm(JSON.parse(val)); if (c.earned > save.earned) { save = c; parts = makeParts(save.selB, 400, 400); applyPageBg(); refreshUI(); applyCtrl(); persist(false); } } catch (e) {}
+    try { const c = norm(JSON.parse(val)); if (c.earned > save.earned) { save = c; parts = makeParts(save.selB, 400, 400); applyPageBg(); refreshUI(); applyCtrl(); updateMusicBtn(); persist(false); } } catch (e) {}
   });
 } catch (e) {}
 addEventListener('visibilitychange', () => persist(true));
@@ -255,7 +267,15 @@ function mix(a, b, k) { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i)
 function segCol(sk, layer, i, n, now, moves) {
   const k = n > 1 ? i / (n - 1) : 0;
   if (sk.mode === 'rainbow') { const h = (k * 300 + now / 15) % 360; return layer === 'o' ? `hsl(${h},80%,32%)` : `hsl(${h},85%,58%)`; }
-  if (sk.mode === 'stripe') return layer === 'o' ? sk.o : sk.b[(((i - moves) % 2) + 2) % 2];
+  if (sk.mode === 'stripe') { const L = sk.b.length; return layer === 'o' ? sk.o : sk.b[(((Math.floor(i) - moves) % L) + L) % L]; }
+  if (sk.mode === 'fire') {
+    const hu = 22 + 22 * Math.sin(now / 160 - k * 7);
+    return layer === 'o' ? `hsl(${hu - 6},90%,28%)` : `hsl(${hu},100%,${52 + 8 * Math.sin(now / 120 - k * 9)}%)`;
+  }
+  if (sk.mode === 'cham') {
+    const hu = 60 + 120 * (.5 + .5 * Math.sin(now / 900 - k * 4));
+    return layer === 'o' ? `hsl(${hu},60%,25%)` : `hsl(${hu},70%,50%)`;
+  }
   const v = layer === 'o' ? sk.o : sk.b;
   return Array.isArray(v) ? mix(v[0], v[1], k) : v;
 }
@@ -287,7 +307,7 @@ function renderSnake(c, pts, sk, w, fd, now, o) {
   }
   if (o.noHead) { c.restore(); return; }
   const [hx, hy] = pts[0], px = -d.y, py = d.x;
-  c.fillStyle = sk.mode === 'rainbow' ? `hsl(${(now / 15) % 360},85%,66%)` : sk.head;
+  c.fillStyle = sk.mode === 'rainbow' ? `hsl(${(now / 15) % 360},85%,66%)` : (sk.head || segCol(sk, 'b', 0, (o.total || n) - 1, now, o.moves || 0));
   c.beginPath(); c.arc(hx, hy, w * .46, 0, 7); c.fill();
   if (o.tongue && Math.sin(now / 160) > .2) {
     c.strokeStyle = '#ff4d6d'; c.lineWidth = Math.max(1, 1.5 * u);
@@ -456,7 +476,7 @@ function drawCrumble(el, now) {
   const f = Math.min(last, el / C.dur * last);
   if (!C.headDone) {
     C.headDone = true;
-    const hc = sk.mode === 'rainbow' ? `hsl(${(now / 15) % 360},85%,66%)` : sk.head;
+    const hc = sk.mode === 'rainbow' ? `hsl(${(now / 15) % 360},85%,66%)` : (sk.head || segCol(sk, 'b', 0, last, now, moves));
     for (let i = 0; i < 45; i++) addDust(C, el, P[0][0], P[0][1], i % 5 ? hc : sk.glow, S * .45);
   }
   if (f > C.front) {
@@ -512,7 +532,8 @@ function renderShop() {
   document.getElementById('shopCoins').textContent = save.coins;
   grid.innerHTML = ''; previews = [];
   const D = shopData(), list = D.list, own = D.own, sel = save['sel' + D.key];
-  list.forEach((it, i) => {
+  list.map((_, i) => i).sort((a, b) => list[a].p - list[b].p || a - b).forEach(i => {
+    const it = list[i];
     const card = document.createElement('div'); card.className = 'card' + (i === sel ? ' sel' : '');
     const c = document.createElement('canvas'); c.width = 140; c.height = 84;
     const name = document.createElement('div'); name.className = 'name'; name.textContent = it.n;
@@ -662,6 +683,97 @@ Object.entries(kb).forEach(([k, b]) => {
   ['pointerup', 'pointercancel'].forEach(n => b.addEventListener(n, () => { if (drag) { drag = null; persist(false); } }));
 });
 addEventListener('resize', () => { for (const k in kb) clampKey(k); applyDpad(); });
+/* ---------- музыка ---------- */
+// тихая генеративная мелодия: мягкие аккорды и редкие нотки, всё синтезируется на лету
+const Music = (() => {
+  let ac = null, master = null, bus = null, delayIn = null, timer = null, nextT = 0, step = 0;
+  const HALF = 60 / 72 / 2;
+  const CH = [[57, 60, 64], [53, 57, 60], [60, 64, 67], [55, 59, 62]];
+  const POOL = [57, 60, 62, 64, 67, 69, 72];
+  const f = m => 440 * Math.pow(2, (m - 69) / 12);
+  function init() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return false;
+    ac = new AC();
+    master = ac.createGain(); master.gain.value = 0;
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2200;
+    bus = ac.createGain(); bus.connect(lp); lp.connect(master); master.connect(ac.destination);
+    const dl = ac.createDelay(2); dl.delayTime.value = .46;
+    const fb = ac.createGain(); fb.gain.value = .3;
+    const dlp = ac.createBiquadFilter(); dlp.type = 'lowpass'; dlp.frequency.value = 1100;
+    delayIn = ac.createGain(); delayIn.gain.value = .5;
+    delayIn.connect(dl); dl.connect(dlp); dlp.connect(fb); fb.connect(dl); dlp.connect(bus);
+    return true;
+  }
+  function pad(t, notes, dur) {
+    notes.forEach(m => [-5, 5].forEach(det => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'triangle'; o.frequency.value = f(m); o.detune.value = det;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.026, t + 1.6);
+      g.gain.setValueAtTime(.026, t + dur - .4); g.gain.linearRampToValueAtTime(0, t + dur + 1.8);
+      o.connect(g); g.connect(bus); o.start(t); o.stop(t + dur + 2);
+    }));
+  }
+  function bass(t, m) {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'sine'; o.frequency.value = f(m);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.05, t + .4); g.gain.exponentialRampToValueAtTime(.0001, t + 5);
+    o.connect(g); g.connect(bus); o.start(t); o.stop(t + 5.2);
+  }
+  function pluck(t, m, vel) {
+    const o = ac.createOscillator(), g = ac.createGain(), lf = ac.createBiquadFilter();
+    o.type = 'triangle'; o.frequency.value = f(m);
+    lf.type = 'lowpass'; lf.frequency.value = 1100;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vel, t + .18); g.gain.exponentialRampToValueAtTime(.0001, t + 2.8);
+    o.connect(lf); lf.connect(g); g.connect(bus); g.connect(delayIn); o.start(t); o.stop(t + 2.9);
+  }
+  function schedule(i, t) {
+    const ch = CH[Math.floor(i / 16) % 4];
+    if (i % 16 === 0) { pad(t, ch, 16 * HALF); bass(t, ch[0] - 24); }
+    if ((i % 2 === 0 && Math.random() < .3) || (i % 2 === 1 && Math.random() < .06)) {
+      const m = (Math.random() < .6 ? ch[Math.floor(Math.random() * 3)] : POOL[Math.floor(Math.random() * POOL.length)]);
+      pluck(t, m, .035 + Math.random() * .02);
+    }
+  }
+  function pump() { while (nextT < ac.currentTime + .5) { schedule(step++, nextT); nextT += HALF; } }
+  return {
+    start() {
+      if (!ac && !init()) return;
+      ac.resume(); master.gain.cancelScheduledValues(ac.currentTime); master.gain.setTargetAtTime(.55, ac.currentTime, .6);
+      if (!timer) { nextT = ac.currentTime + .15; timer = setInterval(pump, 120); }
+    },
+    stop() {
+      if (!ac) return;
+      master.gain.setTargetAtTime(0, ac.currentTime, .15);
+      setTimeout(() => { if (!save.music && ac) ac.suspend(); }, 700);
+    },
+    pause() { if (ac) ac.suspend(); },
+    resume() { if (ac && save.music) ac.resume(); },
+    running() { return !!ac && ac.state === 'running'; }
+  };
+})();
+const musicBtn = document.getElementById('musicBtn'), musicBtn2 = document.getElementById('musicBtn2');
+function updateMusicBtn() {
+  const t = 'Музыка: ' + (save.music ? 'вкл' : 'выкл');
+  musicBtn.textContent = t; musicBtn2.textContent = t;
+}
+function toggleMusic() {
+  save.music = !save.music; persist(true);
+  if (save.music) Music.start(); else Music.stop();
+  updateMusicBtn();
+}
+musicBtn.onclick = musicBtn2.onclick = toggleMusic;
+// браузеры разрешают звук только после первого касания
+const UNLOCK = ['pointerdown', 'touchend', 'keydown', 'click'];
+function unlock() {
+  if (save.music) Music.start();
+  if (!save.music || Music.running()) UNLOCK.forEach(n => removeEventListener(n, unlock, true));
+}
+UNLOCK.forEach(n => addEventListener(n, unlock, true));
+addEventListener('visibilitychange', () => { if (document.hidden) Music.pause(); else Music.resume(); });
+try { tg.onEvent('deactivated', () => Music.pause()); tg.onEvent('activated', () => Music.resume()); } catch (e) {}
+updateMusicBtn();
+
 /* ---------- пауза ---------- */
 const pauseEl = document.getElementById('pause'), pauseBtn = document.getElementById('pauseBtn');
 function updatePauseBtn() { pauseBtn.style.display = alive && !paused ? 'flex' : 'none'; }

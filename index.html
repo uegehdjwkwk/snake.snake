@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Змейка</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  html,body{margin:0;height:100%;color:#d9f2e6;font-family:system-ui,sans-serif;touch-action:none;overflow:hidden;user-select:none;
+    background:radial-gradient(ellipse at 50% 0%,#1d3b44 0%,#0e1c2a 55%,#080d18 100%)}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+  #hud{display:flex;gap:20px;font-size:17px;letter-spacing:.5px}
+  #hud b{color:#ffcf6b;text-shadow:0 0 10px #ff9f3b88}
+  canvas#c{border-radius:16px;max-width:94vw;max-height:66vh;box-shadow:0 0 40px #2fd3a022,0 0 0 2px #2fd3a033}
+  body.arrows canvas#c{max-height:44vh}
+  body.arrows{padding-bottom:150px;box-sizing:border-box}
+  #dpad.edit button{outline:2px dashed rgba(255,207,107,.55);outline-offset:5px;background:rgba(255,207,107,.18);cursor:move}
+  #dpad.edit button.sel{outline:2px solid #ffcf6b;background:rgba(255,207,107,.4)}
+  #dpadEdit{display:none;position:fixed;top:10px;left:10px;right:10px;z-index:6;align-items:center;gap:8px;
+    background:rgba(10,18,28,.92);padding:8px 12px;border-radius:14px;font-size:14px;box-shadow:0 0 0 1px rgba(255,207,107,.3)}
+  #dpadEdit.on{display:flex;flex-direction:column}
+  #dpadEdit .row{display:flex;align-items:center;gap:8px;width:100%}
+  #dpadEdit .row .btn{flex:1}
+  #dpadEdit input{flex:1;min-width:0;accent-color:#ffcf6b}
+  #dpadBtn{display:none}
+  body.arrows #dpadBtn{display:inline-block}
+  body.arrows #dpad button{display:block}
+  #dpad button{display:none;position:fixed;z-index:5;left:50%;top:86%;width:66px;height:58px;padding:0;transform:translate(-50%,-50%);border:0;border-radius:14px;background:rgba(255,255,255,.1);color:#d9f2e6;font-size:24px;
+    touch-action:none;font-family:inherit;box-shadow:0 0 0 1px rgba(47,211,160,.25)}
+  #dpad button:active{background:rgba(47,211,160,.35)}
+  #dpad button{translate:0 0;transition:translate .55s cubic-bezier(.2,.9,.3,1.18),opacity .4s}
+  #dpad button[data-k=l]{transition-delay:.05s}
+  #dpad button[data-k=d]{transition-delay:.1s}
+  #dpad button[data-k=r]{transition-delay:.15s}
+  #dpad.rest button{translate:0 100vh;opacity:0;pointer-events:none}
+  .btn.sm{padding:8px 16px;font-size:14px;background:rgba(255,255,255,.1);color:#d9f2e6;box-shadow:none;font-weight:500}
+  #btns{flex-wrap:wrap;justify-content:center;max-width:94vw}
+  #pauseBtn{display:none;position:fixed;top:12px;right:12px;width:58px;height:52px;border-radius:14px;border:0;z-index:7;touch-action:none;
+    background:rgba(255,255,255,.1);color:#d9f2e6;align-items:center;justify-content:center;padding:0;font-family:inherit;
+    box-shadow:0 0 0 1px rgba(47,211,160,.25)}
+  #pauseBtn:active{background:rgba(47,211,160,.35)}
+  #pauseBtn svg{width:22px;height:22px;fill:currentColor}
+  #pause{display:none;position:fixed;inset:0;z-index:8;background:rgba(6,12,22,.72);backdrop-filter:blur(3px);align-items:center;justify-content:center}
+  #pause.on{display:flex}
+  #pause .box{display:flex;flex-direction:column;gap:12px;align-items:center}
+  #pause .t{font-size:28px;letter-spacing:2px;color:#ffcf6b;text-shadow:0 0 14px #ff9f3b88;margin-bottom:6px}
+  #msg{height:22px;opacity:.65;font-size:14px}
+  #btns{display:flex;gap:10px}
+  .btn{background:linear-gradient(135deg,#2fd3a0,#1a9c8a);color:#04211c;font-weight:600;border:0;border-radius:12px;
+    padding:11px 24px;font-size:16px;box-shadow:0 0 18px #2fd3a055;font-family:inherit}
+  .btn.alt{background:linear-gradient(135deg,#ffcf6b,#ff9f3b);box-shadow:0 0 18px #ff9f3b55}
+  #shop{position:fixed;inset:0;background:rgba(6,12,22,.97);display:none;flex-direction:column;z-index:10}
+  #shop.open{display:flex}
+  #shopHead{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;font-size:18px}
+  #shopHead b{color:#ffcf6b}
+  #closeShop{background:none;border:0;color:#d9f2e6;font-size:22px;padding:4px 10px}
+  #tabs{display:flex;gap:8px;padding:0 16px 10px}
+  #tabs button{flex:1;padding:9px;border:0;border-radius:10px;background:rgba(255,255,255,.07);color:#d9f2e6;font-size:15px;font-family:inherit}
+  #tabs button.on{background:#2fd3a0;color:#04211c;font-weight:600}
+  #grid{flex:1;overflow-y:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch;padding:4px 16px 20px;
+    display:grid;grid-template-columns:repeat(2,1fr);gap:10px;align-content:start}
+  .card{background:rgba(255,255,255,.06);border-radius:14px;padding:8px;display:flex;flex-direction:column;gap:6px;border:2px solid transparent}
+  .card.sel{border-color:#2fd3a0;box-shadow:0 0 14px #2fd3a044}
+  .card canvas{width:100%;height:auto;border-radius:10px}
+  .card .name{font-size:14px;text-align:center}
+  .card button{border:0;border-radius:9px;padding:8px;font-size:14px;font-weight:600;background:#ffcf6b;color:#3a2600;font-family:inherit}
+  .card button.own{background:#2fd3a0;color:#04211c}
+  .card button.cant{background:rgba(255,255,255,.1);color:#8a97a3}
+  .card button:disabled{opacity:.8}
+</style>
+</head>
+<body>
+<div id="hud"><span>Счёт: <b id="score">0</b></span><span>Рекорд: <b id="best">0</b></span><span>🍎 <b id="coins">0</b></span></div>
+<canvas id="c" width="400" height="400"></canvas>
+<div id="msg">Свайпай, чтобы двигаться</div>
+<div id="dpad" class="rest">
+  <button data-k="u" data-d="0,-1">▲</button>
+  <button data-k="l" data-d="-1,0">◀</button>
+  <button data-k="d" data-d="0,1">▼</button>
+  <button data-k="r" data-d="1,0">▶</button>
+</div>
+<div id="btns"><button class="btn" id="restart">Играть</button><button class="btn alt" id="shopBtn">Магазин</button>
+  <button class="btn sm" id="ctrlBtn"></button>
+  <button class="btn sm" id="dpadBtn">Настроить стрелки</button></div>
+<div id="dpadEdit">
+  <div class="row"><span>Размер <b id="dpadSel">▲</b></span><input type="range" id="dpadSize" min="50" max="220" step="5"></div>
+  <div class="row"><button class="btn sm" id="dpadAll">Всем такой</button><button class="btn sm" id="dpadReset">Сброс</button><button class="btn sm" id="dpadDone">Готово</button></div>
+</div>
+
+<button id="pauseBtn" aria-label="Пауза"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="5" height="18" rx="1.5"/><rect x="14" y="3" width="5" height="18" rx="1.5"/></svg></button>
+<div id="pause"><div class="box"><div class="t">Пауза</div>
+  <button class="btn" id="resumeBtn">Продолжить</button><button class="btn sm" id="quitBtn">Закончить игру</button></div></div>
+
+<div id="shop">
+  <div id="shopHead"><b>Магазин</b><span>🍎 <b id="shopCoins">0</b></span><button id="closeShop">✕</button></div>
+  <div id="tabs"><button data-t="S" class="on">Змейки</button><button data-t="A">Яблоки</button><button data-t="B">Фоны</button></div>
+  <div id="grid"></div>
+</div>
+
+<script>
+const tg = window.Telegram && Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); try { tg.disableVerticalSwipes(); } catch (e) {} }
+const CS = tg && tg.CloudStorage;
+
+/* ---------- скины ---------- */
+const SNAKES = [
+  {n: 'Лесная',   p: 0,   o: '#1f9a6e', b: '#3fd48f', glow: '#2fe6a5', head: '#4fe0a0', dot: 'rgba(10,70,50,.35)'},
+  {n: 'Океан',    p: 25,  o: '#1565a8', b: '#3fb0f0', glow: '#3fb0f0', head: '#6cc8ff', dot: 'rgba(5,40,90,.35)'},
+  {n: 'Лава',     p: 40,  o: ['#a8420f', '#5a1005'], b: ['#ffb347', '#e03a10'], glow: '#ff4a1a', head: '#ffd070', dot: 'rgba(80,0,0,.3)'},
+  {n: 'Сакура',   p: 60,  o: '#c2547f', b: '#ff9ec7', glow: '#ff9ec7', head: '#ffc2dc', dot: 'rgba(150,30,80,.3)'},
+  {n: 'Золото',   p: 80,  o: '#a8741a', b: ['#ffe27a', '#e0a21a'], glow: '#ffd34a', head: '#fff0a0', dot: 'rgba(120,70,0,.35)'},
+  {n: 'Тигр',     p: 100, mode: 'stripe', o: '#2a1a10', b: ['#ff9a2b', '#2a1a10'], glow: '#ff9a2b', head: '#ffb04a'},
+  {n: 'Неон',     p: 130, o: ['#006c8a', '#7a0f6a'], b: ['#00f0ff', '#ff2bd6'], glow: '#00f0ff', head: '#b6ffff', dot: 'rgba(0,0,0,.25)'},
+  {n: 'Радуга',   p: 160, mode: 'rainbow', glow: '#ffffff', dot: 'rgba(0,0,0,.2)'},
+  {n: 'Призрак',  p: 200, o: '#8fa2c8', b: '#e8f0ff', glow: '#bcd0ff', head: '#ffffff', dot: 'rgba(120,140,190,.35)'},
+  {n: 'Космос',   p: 250, o: ['#3a1fa0', '#120a40'], b: ['#7b4dff', '#2a1a7a'], glow: '#8f6bff', head: '#b79bff', dot: 'rgba(255,255,255,.85)', every: 2, dotR: .55}
+];
+const APPLES = [
+  {n: 'Яблоко',       p: 0,   glow: '#ff6b4a', sp: [255, 190, 90]},
+  {n: 'Зелёное',      p: 15,  glow: '#9be84a', sp: [190, 255, 120]},
+  {n: 'Золотое',      p: 40,  glow: '#ffd34a', sp: [255, 230, 100]},
+  {n: 'Вишня',        p: 30,  glow: '#ff3b5c', sp: [255, 90, 110]},
+  {n: 'Клубника',     p: 50,  glow: '#ff4d5a', sp: [255, 110, 120]},
+  {n: 'Апельсин',     p: 60,  glow: '#ff9a1a', sp: [255, 170, 60]},
+  {n: 'Виноград',     p: 80,  glow: '#a463e8', sp: [190, 130, 255]},
+  {n: 'Арбуз',        p: 100, glow: '#ff4d5a', sp: [255, 100, 110]},
+  {n: 'Звезда',       p: 150, glow: '#fff08a', sp: [255, 240, 140]},
+  {n: 'Бриллиант',    p: 200, glow: '#5ee6ff', sp: [140, 240, 255]}
+];
+
+const N = 20;
+const BGS = [
+  {n: 'Ночной лес', p: 0,   g: ['#16323a', '#0a121c'], tile: 'rgba(120,255,210,.035)', pt: {m: 'float', c: [255, 226, 122], n: 22}},
+  {n: 'Пустыня',    p: 30,  g: ['#8a4a32', '#2a1438'], tile: 'rgba(255,200,120,.05)',  pt: {m: 'dust',  c: [255, 214, 150], n: 40}},
+  {n: 'Снегопад',   p: 50,  g: ['#27405c', '#0b1424'], tile: 'rgba(210,235,255,.05)',  pt: {m: 'fall',  c: [235, 245, 255], n: 55}},
+  {n: 'Глубины',    p: 70,  g: ['#0e6a7a', '#04141f'], tile: 'rgba(120,220,255,.045)', pt: {m: 'rise',  c: [180, 240, 255], n: 26, o: 1}},
+  {n: 'Киберпанк',  p: 100, g: ['#3a0f4f', '#0a0618'], tile: 'rgba(255,43,214,.07)',   pt: {m: 'rain',  c: [0, 240, 255], n: 28}},
+  {n: 'Вулкан',     p: 130, g: ['#5a1a0a', '#12060a'], tile: 'rgba(255,120,40,.06)',   pt: {m: 'rise',  c: [255, 150, 60], n: 36}},
+  {n: 'Ночной дождь', p: 110, g: ['#1c2431', '#06080d'], tile: 'rgba(150,175,205,.035)', pt: {m: 'rain', c: [160, 185, 215], n: 90, sl: .22, fl: 1}}
+];
+function makeParts(bi, W, H) {
+  const n = Math.max(5, Math.round(BGS[bi].pt.n * W * H / 160000));
+  return Array.from({length: n}, () => ({x: Math.random() * W, y: Math.random() * H,
+    r: 1 + Math.random() * 1.8, a: Math.random() * 6.28, s: .15 + Math.random() * .3}));
+}
+// общий фон приложения подстраивается под выбранную карту
+function applyPageBg() {
+  const g = BGS[save.selB].g;
+  const css = `radial-gradient(ellipse at 50% 0%, ${g[0]} 0%, ${g[1]} 55%, ${mix(g[1], '#000000', .5)} 100%)`;
+  document.documentElement.style.background = css; document.body.style.background = css;
+  try { tg.setBackgroundColor(g[1]); tg.setHeaderColor(g[1]); } catch (e) {}
+}
+const bgCache = {};
+function drawBg(c, W, H, bi, parts, now) {
+  const B = BGS[bi], s = B.pt, col = s.c.join(',');
+  const key = bi + '_' + W + 'x' + H;
+  let L = bgCache[key];
+  if (!L) {
+    L = bgCache[key] = document.createElement('canvas'); L.width = W; L.height = H;
+    const lc = L.getContext('2d');
+    const g = lc.createRadialGradient(W / 2, H * .4, W * .1, W / 2, H / 2, W * .75);
+    g.addColorStop(0, B.g[0]); g.addColorStop(1, B.g[1]);
+    lc.fillStyle = g; lc.fillRect(0, 0, W, H);
+    const cs = W / N; lc.fillStyle = B.tile;
+    for (let x = 0; x < N; x++) for (let y = 0; y * cs < H; y++) if ((x + y) % 2) lc.fillRect(x * cs, y * cs, cs, cs);
+  }
+  c.drawImage(L, 0, 0);
+  parts.forEach(f => {
+    f.a += .01;
+    if (s.m === 'float') { f.x += Math.cos(f.a) * f.s; f.y += Math.sin(f.a * 1.3) * f.s; }
+    else if (s.m === 'fall') { f.y += f.s * 2.2; f.x += Math.sin(f.a * 3) * .3; }
+    else if (s.m === 'rise') { f.y -= f.s * (s.o ? 1.6 : 2.2); f.x += Math.sin(f.a * 4) * .35; }
+    else if (s.m === 'dust') { f.x += f.s * 3; f.y += Math.sin(f.a * 2) * .25; }
+    else if (s.m === 'rain') { const dy = f.s * 20 + 3; f.y += dy; f.x -= dy * (s.sl || 0); }
+    f.x = ((f.x % W) + W) % W; f.y = ((f.y % H) + H) % H;
+    if (s.m === 'float') {
+      const k = .5 + .5 * Math.sin(now / 500 + f.a * 5);
+      c.fillStyle = `rgba(${col},${.05 + .12 * k})`; c.beginPath(); c.arc(f.x, f.y, f.r * 3.2, 0, 7); c.fill();
+      c.fillStyle = `rgba(${col},${.25 + .6 * k})`; c.beginPath(); c.arc(f.x, f.y, f.r, 0, 7); c.fill();
+    } else if (s.m === 'fall') {
+      c.fillStyle = `rgba(${col},.75)`; c.beginPath(); c.arc(f.x, f.y, f.r * .9, 0, 7); c.fill();
+    } else if (s.m === 'rise' && s.o) {
+      c.strokeStyle = `rgba(${col},.55)`; c.lineWidth = 1; c.beginPath(); c.arc(f.x, f.y, f.r * 1.6, 0, 7); c.stroke();
+    } else if (s.m === 'rise') {
+      const k = .5 + .5 * Math.sin(now / 200 + f.a * 7);
+      c.fillStyle = `rgba(${col},${.06 + .12 * k})`; c.beginPath(); c.arc(f.x, f.y, f.r * 2.8, 0, 7); c.fill();
+      c.fillStyle = `rgba(${col},${.4 + .5 * k})`; c.beginPath(); c.arc(f.x, f.y, f.r * .8, 0, 7); c.fill();
+    } else if (s.m === 'dust') {
+      c.fillStyle = `rgba(${col},.28)`; c.beginPath(); c.arc(f.x, f.y, f.r * .8, 0, 7); c.fill();
+    } else if (s.m === 'rain') {
+      c.strokeStyle = `rgba(${col},.45)`; c.lineWidth = 1; c.beginPath(); c.moveTo(f.x, f.y); c.lineTo(f.x - 8 * (s.sl || 0), f.y + 8); c.stroke();
+    }
+  });
+  if (s.fl) { // редкие вспышки молнии
+    if (!parts.ft && Math.random() < .0025) parts.ft = now;
+    if (parts.ft) {
+      const age = now - parts.ft;
+      const a = age < 70 ? .25 : age < 110 ? .03 : age < 200 ? .18 * (1 - (age - 110) / 90) : 0;
+      if (a > 0) { c.fillStyle = `rgba(200,220,255,${a})`; c.fillRect(0, 0, W, H); }
+      if (age > 260) parts.ft = 0;
+    }
+  }
+}
+
+/* ---------- сохранение ---------- */
+function defKeys(cx, cy, sc) {
+  const W = innerWidth || 400, H = innerHeight || 800, f = (dx, dy) => ({x: cx + dx * sc / W, y: cy + dy * sc / H, s: sc});
+  return {u: f(0, -33), l: f(-74, 33), d: f(0, 33), r: f(74, 33)};
+}
+function norm(s) {
+  s = s || {};
+  const o = {coins: +s.coins || 0, earned: +s.earned || 0, best: +s.best || 0,
+    ownS: Array.isArray(s.ownS) ? s.ownS : [0], ownA: Array.isArray(s.ownA) ? s.ownA : [0],
+    selS: +s.selS || 0, selA: +s.selA || 0,
+    ownB: Array.isArray(s.ownB) ? s.ownB : [0], selB: +s.selB || 0,
+    ctrl: s.ctrl === 'arrows' ? 'arrows' : 'swipe'};
+  if (!o.ownS.includes(0)) o.ownS.push(0);
+  if (!o.ownA.includes(0)) o.ownA.push(0);
+  if (!o.ownS.includes(o.selS)) o.selS = 0;
+  if (!o.ownA.includes(o.selA)) o.selA = 0;
+  const cl = (v, a, b, f) => { v = +v; return Math.min(b, Math.max(a, isFinite(v) && v ? v : f)); };
+  const d = s.dpad || {}, def = defKeys(cl(d.x, .05, .95, .5), cl(d.y, .05, .97, .86), cl(d.s, .6, 1.8, 1));
+  o.keys = {};
+  ['u', 'l', 'd', 'r'].forEach(k => { const q = (s.keys || {})[k] || {};
+    o.keys[k] = {x: cl(q.x, .02, .98, def[k].x), y: cl(q.y, .02, .98, def[k].y), s: cl(q.s, .5, 2.2, def[k].s)}; });
+  if (!o.ownB.includes(0)) o.ownB.push(0);
+  if (!o.ownB.includes(o.selB) || o.selB >= BGS.length) o.selB = 0;
+  return o;
+}
+let save;
+try { save = norm(JSON.parse(localStorage.getItem('snake_save'))); } catch (e) { save = norm(null); }
+try { save.best = Math.max(save.best, +localStorage.getItem('snake_best') || 0); } catch (e) {}
+function persist(cloud) {
+  const s = JSON.stringify(save);
+  try { localStorage.setItem('snake_save', s); } catch (e) {}
+  if (cloud && CS) try { CS.setItem('snake_save', s, () => {}); } catch (e) {}
+}
+function refreshUI() {
+  document.getElementById('coins').textContent = save.coins;
+  document.getElementById('best').textContent = save.best;
+  document.getElementById('shopCoins').textContent = save.coins;
+}
+refreshUI();
+if (CS) try {
+  CS.getItem('snake_save', (err, val) => {
+    if (err || !val) return;
+    try { const c = norm(JSON.parse(val)); if (c.earned > save.earned) { save = c; parts = makeParts(save.selB, 400, 400); applyPageBg(); refreshUI(); applyCtrl(); persist(false); } } catch (e) {}
+  });
+} catch (e) {}
+addEventListener('visibilitychange', () => persist(true));
+
+/* ---------- цвета ---------- */
+const hex = c => [1, 3, 5].map(i => parseInt(c.slice(i, i + 2), 16));
+function mix(a, b, k) { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * k)).join(',')})`; }
+function segCol(sk, layer, i, n, now, moves) {
+  const k = n > 1 ? i / (n - 1) : 0;
+  if (sk.mode === 'rainbow') { const h = (k * 300 + now / 15) % 360; return layer === 'o' ? `hsl(${h},80%,32%)` : `hsl(${h},85%,58%)`; }
+  if (sk.mode === 'stripe') return layer === 'o' ? sk.o : sk.b[(((i - moves) % 2) + 2) % 2];
+  const v = layer === 'o' ? sk.o : sk.b;
+  return Array.isArray(v) ? mix(v[0], v[1], k) : v;
+}
+
+/* ---------- отрисовка змейки ---------- */
+function renderSnake(c, pts, sk, w, fd, now, o) {
+  const n = pts.length, u = w / 20, moves = o.moves || 0;
+  let d = fd;
+  const dx = pts[0][0] - pts[1][0], dy = pts[0][1] - pts[1][1], L = Math.hypot(dx, dy);
+  if (L > .01) d = {x: dx / L, y: dy / L};
+  if (o.face) d = o.face;
+  c.save();
+  c.lineCap = c.lineJoin = 'round';
+  c.globalAlpha = o.dead ? .55 : 1;
+  c.shadowColor = sk.glow; c.shadowBlur = 16 * u; c.lineWidth = w * .86; c.strokeStyle = sk.glow;
+  c.beginPath(); pts.forEach((q, i) => i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1])); c.stroke();
+  c.shadowBlur = 0;
+  [['o', .86], ['b', .6], ['h', .16]].forEach(([layer, k]) => {
+    c.lineWidth = w * k;
+    for (let i = 0; i < n - 1; i++) {
+      c.strokeStyle = layer === 'h' ? 'rgba(255,255,255,.28)' : segCol(sk, layer, i + (o.off || 0), (o.total || n) - 1, now, moves);
+      c.beginPath(); c.moveTo(pts[i][0], pts[i][1]); c.lineTo(pts[i + 1][0], pts[i + 1][1]); c.stroke();
+    }
+  });
+  c.shadowBlur = 0;
+  if (sk.dot) {
+    c.fillStyle = sk.dot;
+    for (let i = 2; i < n; i++) if ((i + (o.off || 0)) % (sk.every || 1) === 0) { c.beginPath(); c.arc(pts[i][0], pts[i][1], 2.2 * u * (sk.dotR || 1), 0, 7); c.fill(); }
+  }
+  if (o.noHead) { c.restore(); return; }
+  const [hx, hy] = pts[0], px = -d.y, py = d.x;
+  c.fillStyle = sk.mode === 'rainbow' ? `hsl(${(now / 15) % 360},85%,66%)` : sk.head;
+  c.beginPath(); c.arc(hx, hy, w * .46, 0, 7); c.fill();
+  if (o.tongue && Math.sin(now / 160) > .2) {
+    c.strokeStyle = '#ff4d6d'; c.lineWidth = Math.max(1, 1.5 * u);
+    const bx = hx + d.x * w * .46, by = hy + d.y * w * .46, ex = bx + d.x * 7 * u, ey = by + d.y * 7 * u;
+    c.beginPath(); c.moveTo(bx, by); c.lineTo(ex, ey);
+    c.moveTo(ex, ey); c.lineTo(ex + d.x * 3 * u + px * 3 * u, ey + d.y * 3 * u + py * 3 * u);
+    c.moveTo(ex, ey); c.lineTo(ex + d.x * 3 * u - px * 3 * u, ey + d.y * 3 * u - py * 3 * u); c.stroke();
+  }
+  [-1, 1].forEach(s => {
+    const ex = hx + d.x * 3 * u + px * s * 5 * u, ey = hy + d.y * 3 * u + py * s * 5 * u;
+    c.fillStyle = '#fffbe0'; c.beginPath(); c.arc(ex, ey, 3.2 * u, 0, 7); c.fill();
+    c.fillStyle = '#10231c'; c.beginPath(); c.arc(ex + d.x * 1.2 * u, ey + d.y * 1.2 * u, 1.7 * u, 0, 7); c.fill();
+  });
+  c.restore();
+}
+
+/* ---------- отрисовка яблок ---------- */
+function drawApple(c, id, x, y, r, now) {
+  c.save(); c.translate(x, y);
+  c.shadowColor = APPLES[id].glow; c.shadowBlur = r * 2.2;
+  const rg = (cx0, cy0, r0, r1, st) => { const g = c.createRadialGradient(cx0, cy0, r0, 0, 0, r1); st.forEach((s, i) => g.addColorStop(i / (st.length - 1), s)); return g; };
+  const circ = (px, py, rad) => { c.beginPath(); c.arc(px, py, rad, 0, 7); c.fill(); };
+  const leaf = col => { c.shadowBlur = 0; c.fillStyle = col; c.beginPath(); c.ellipse(r * .35, -r * 1.05, r * .5, r * .25, -.6, 0, 7); c.fill(); };
+  const lw = Math.max(1, r * .08);
+  switch (id) {
+    case 0: c.fillStyle = rg(-r * .3, -r * .3, r * .1, r * 1.3, ['#ffb199', '#ff5a3c', '#b3201a']); circ(0, 0, r); leaf('#5fd35f'); break;
+    case 1: c.fillStyle = rg(-r * .3, -r * .3, r * .1, r * 1.3, ['#e6ffa8', '#7ed348', '#2e7d1f']); circ(0, 0, r); leaf('#2f9a3a'); break;
+    case 2:
+      c.fillStyle = rg(-r * .3, -r * .3, r * .1, r * 1.3, ['#fff6bd', '#ffcf3a', '#b8860b']); circ(0, 0, r); leaf('#e8b830');
+      c.fillStyle = `rgba(255,255,255,${.5 + .5 * Math.sin(now / 180)})`; circ(-r * .35, -r * .35, r * .16); break;
+    case 3: {
+      c.shadowBlur = 0; c.strokeStyle = '#3d7a2a'; c.lineWidth = Math.max(1, r * .12);
+      c.beginPath(); c.moveTo(-r * .5, r * .1); c.quadraticCurveTo(-r * .2, -r, r * .15, -r * 1.1);
+      c.moveTo(r * .5, r * .2); c.quadraticCurveTo(r * .3, -r * .8, r * .15, -r * 1.1); c.stroke();
+      c.shadowBlur = r * 2.2;
+      [[-r * .5, r * .3], [r * .5, r * .4]].forEach(([px, py]) => {
+        c.save(); c.translate(px, py);
+        c.fillStyle = rg(-r * .2, -r * .2, r * .05, r * .8, ['#ff9aa8', '#e01a3c', '#7a0a1c']); circ(0, 0, r * .6); c.restore();
+      });
+      break;
+    }
+    case 4:
+      c.fillStyle = rg(-r * .3, -r * .2, r * .1, r * 1.4, ['#ff8a8a', '#ff3b4e', '#b3121f']);
+      c.beginPath(); c.moveTo(0, r * 1.05); c.bezierCurveTo(-r * 1.4, r * .2, -r * 1.1, -r * .85, 0, -r * .65);
+      c.bezierCurveTo(r * 1.1, -r * .85, r * 1.4, r * .2, 0, r * 1.05); c.fill();
+      c.shadowBlur = 0; c.fillStyle = '#ffe58a';
+      [[-.4, 0], [.4, 0], [0, .3], [-.25, .6], [.25, .6], [0, -.25]].forEach(([px, py]) => circ(px * r, py * r, r * .07));
+      c.fillStyle = '#4fc24f';
+      [[-.35, -.7, -.5], [.35, -.7, .5], [0, -.8, 0]].forEach(([px, py, a]) => { c.beginPath(); c.ellipse(px * r, py * r, r * .35, r * .14, a, 0, 7); c.fill(); });
+      break;
+    case 5:
+      c.fillStyle = rg(-r * .3, -r * .3, r * .1, r * 1.3, ['#ffd27a', '#ff9a1a', '#c75a00']); circ(0, 0, r);
+      c.shadowBlur = 0; c.strokeStyle = 'rgba(255,255,255,.28)'; c.lineWidth = lw;
+      for (let k = 0; k < 6; k++) { c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(k * Math.PI / 3) * r * .82, Math.sin(k * Math.PI / 3) * r * .82); c.stroke(); }
+      c.beginPath(); c.arc(0, 0, r * .82, 0, 7); c.stroke();
+      leaf('#4fc24f'); break;
+    case 6: {
+      const berry = (px, py, rad) => { c.save(); c.translate(px, py); c.fillStyle = rg(-rad * .3, -rad * .3, rad * .1, rad * 1.2, ['#e3b8ff', '#8a3fd1', '#4b1a80']); circ(0, 0, rad); c.restore(); };
+      [[-.6, -.3], [0, -.3], [.6, -.3], [-.3, .3], [.3, .3], [0, .85]].forEach(([px, py]) => berry(px * r, py * r, r * .45));
+      c.shadowBlur = 0; c.strokeStyle = '#5a7a2a'; c.lineWidth = Math.max(1, r * .1);
+      c.beginPath(); c.moveTo(0, -r * .7); c.lineTo(r * .1, -r * 1.1); c.stroke(); leaf('#4fc24f'); break;
+    }
+    case 7:
+      c.fillStyle = '#2e9d3a'; circ(0, 0, r); c.shadowBlur = 0;
+      c.fillStyle = '#d9f5c0'; circ(0, 0, r * .88); c.fillStyle = '#ff4d5a'; circ(0, 0, r * .76);
+      c.fillStyle = '#1b1b1b';
+      [[-.3, -.1, .5], [.2, -.3, -.4], [.35, .15, .3], [-.1, .3, 0], [-.4, .25, -.6]].forEach(([px, py, a]) => { c.beginPath(); c.ellipse(px * r, py * r, r * .09, r * .05, a, 0, 7); c.fill(); });
+      break;
+    case 8:
+      c.rotate(now / 900);
+      c.fillStyle = rg(0, 0, r * .1, r * 1.2, ['#fff9c4', '#ffd23a', '#e69a00']);
+      c.beginPath();
+      for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5 - Math.PI / 2, rad = i % 2 ? r * .55 : r * 1.15; c.lineTo(Math.cos(a) * rad, Math.sin(a) * rad); }
+      c.closePath(); c.fill(); break;
+    case 9: {
+      c.fillStyle = rg(-r * .2, -r * .4, r * .1, r * 1.3, ['#e8ffff', '#5ee6ff', '#1a8fc7']);
+      c.beginPath(); c.moveTo(-r * .6, -r * .7); c.lineTo(r * .6, -r * .7); c.lineTo(r, -r * .1); c.lineTo(0, r); c.lineTo(-r, -r * .1); c.closePath(); c.fill();
+      c.shadowBlur = 0; c.strokeStyle = 'rgba(255,255,255,.6)'; c.lineWidth = lw;
+      c.beginPath(); c.moveTo(-r, -r * .1); c.lineTo(r, -r * .1);
+      c.moveTo(-r * .6, -r * .7); c.lineTo(-r * .3, -r * .1); c.lineTo(0, r);
+      c.moveTo(r * .6, -r * .7); c.lineTo(r * .3, -r * .1); c.lineTo(0, r);
+      c.moveTo(-r * .3, -r * .1); c.lineTo(0, -r * .7); c.lineTo(r * .3, -r * .1); c.stroke();
+      c.strokeStyle = `rgba(255,255,255,${.5 + .5 * Math.sin(now / 200)})`;
+      c.beginPath(); c.moveTo(-r * .75, -r * .95); c.lineTo(-r * .75, -r * .45); c.moveTo(-r, -r * .7); c.lineTo(-r * .5, -r * .7); c.stroke();
+      break;
+    }
+  }
+  c.restore();
+}
+
+/* ---------- игра ---------- */
+const S = 400 / N, STEP = 125;
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+let snake, dir = {x: 1, y: 0}, next, q = [], crumble = null, food, score, timer, alive = false, lastTick = 0, oldTail, dead = false, moves = 0;
+let parts = makeParts(save.selB, 400, 400);
+applyPageBg();
+const sparks = [];
+const rnd = () => Math.floor(Math.random() * N);
+const cx = c => c.x * S + S / 2, cy = c => c.y * S + S / 2;
+function placeFood() { do { food = {x: rnd(), y: rnd()}; } while (snake.some(s => s.x === food.x && s.y === food.y)); }
+function haptic(t) { try { tg.HapticFeedback.notificationOccurred(t); } catch (e) {} }
+const btns = document.getElementById('btns');
+
+let runId = 0, paused = false, pauseAt = 0;
+function start() {
+  snake = [{x: 10, y: 10}, {x: 9, y: 10}, {x: 8, y: 10}];
+  oldTail = {...snake[2]};
+  dir = next = {x: 1, y: 0}; q.length = 0; crumble = null; score = 0; alive = true; dead = false; moves = 0; lastTick = performance.now();
+  document.getElementById('score').textContent = 0;
+  document.getElementById('msg').textContent = ctrlHint();
+  const run = ++runId;
+  setTimeout(() => { if (alive && run === runId) document.getElementById('msg').textContent = ''; }, 3000);
+  btns.style.display = 'none';
+  updateDpadState();
+  paused = false; pauseEl.classList.remove('on'); updatePauseBtn();
+  placeFood();
+}
+function tick() {
+  if (q.length) dir = q.shift();
+  const h = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+  if (h.x < 0 || h.y < 0 || h.x >= N || h.y >= N || snake.some(s => s.x === h.x && s.y === h.y)) return gameOver();
+  snake.unshift(h); moves++;
+  if (h.x === food.x && h.y === food.y) {
+    oldTail = {...snake[snake.length - 1]};
+    score++; save.coins++; save.earned++; persist(false);
+    document.getElementById('score').textContent = score; refreshUI();
+    const sp = APPLES[save.selA].sp;
+    for (let i = 0; i < 12; i++) sparks.push({x: cx(food), y: cy(food), vx: (Math.random() - .5) * 3, vy: (Math.random() - .5) * 3, l: 1, c: sp});
+    try { tg.HapticFeedback.impactOccurred('light'); } catch (e) {}
+    placeFood();
+  } else oldTail = snake.pop();
+}
+function gameOver() {
+  clearInterval(timer); alive = false; dead = true; haptic('error'); crumble = makeCrumble();
+  if (score > save.best) save.best = score;
+  persist(true); refreshUI();
+  document.getElementById('msg').textContent = 'Игра окончена · +' + score + ' 🍎';
+  document.getElementById('restart').textContent = 'Заново';
+  btns.style.display = '';
+  updateDpadState();
+  paused = false; pauseEl.classList.remove('on'); updatePauseBtn();
+}
+
+function background(now) { drawBg(ctx, 400, 400, save.selB, parts, now); }
+function drawSnake(now) {
+  const t = alive ? Math.min(1, Math.max(0, (now - lastTick) / STEP)) : 1, n = snake.length;
+  const lerp = (a, b) => ({x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t});
+  const head = lerp(snake[1], snake[0]), tail = lerp(oldTail, snake[n - 1]);
+  const pts = [head, ...snake.slice(1), tail].map(p => [cx(p), cy(p)]);
+  renderSnake(ctx, pts, SNAKES[save.selS], S, dir, now, {dead: false, tongue: alive, moves, face: dead ? dir : null});
+}
+const CR_PRE = 260;
+function makeCrumble() {
+  const n = snake.length;
+  const pts = [snake[0], ...snake.slice(1), snake[n - 1]].map(c => [cx(c), cy(c)]);
+  return {t0: performance.now(), pts, front: 0, dust: [], dur: Math.min(1000, 350 + n * 14), headDone: false, done: false};
+}
+function addDust(C, el, x, y, color, spread) {
+  const ang = Math.random() * 6.283, rad = Math.random() * spread;
+  C.dust.push({ox: x + Math.cos(ang) * rad, oy: y + Math.sin(ang) * rad,
+    vx: .03 + Math.random() * .07 + (Math.random() - .5) * .03, vy: -.02 - Math.random() * .06 + (Math.random() - .5) * .03,
+    ph: Math.random() * 6.28, sz: 1.2 + Math.random() * 1.8, life: 700 + Math.random() * 600, born: el, c: color, a: .6 + Math.random() * .4});
+}
+function drawCrumble(el, now) {
+  const C = crumble, sk = SNAKES[save.selS], P = C.pts, last = P.length - 1;
+  const f = Math.min(last, el / C.dur * last);
+  if (!C.headDone) {
+    C.headDone = true;
+    const hc = sk.mode === 'rainbow' ? `hsl(${(now / 15) % 360},85%,66%)` : sk.head;
+    for (let i = 0; i < 45; i++) addDust(C, el, P[0][0], P[0][1], i % 5 ? hc : sk.glow, S * .45);
+  }
+  if (f > C.front) {
+    const cnt = Math.round((f - C.front) * 16 + Math.random());
+    for (let k = 0; k < cnt; k++) {
+      const t = C.front + Math.random() * (f - C.front), a = Math.min(last - 1, Math.floor(t)), fr = t - a;
+      const x = P[a][0] + (P[a + 1][0] - P[a][0]) * fr, y = P[a][1] + (P[a + 1][1] - P[a][1]) * fr;
+      const col = Math.random() < .18 ? sk.glow : segCol(sk, Math.random() < .8 ? 'b' : 'o', a, last, now, moves);
+      addDust(C, el, x, y, col, S * .42);
+    }
+    C.front = f;
+  }
+  if (f < last) {
+    const a = Math.floor(f), fr = f - a;
+    const fp = [P[a][0] + (P[a + 1][0] - P[a][0]) * fr, P[a][1] + (P[a + 1][1] - P[a][1]) * fr];
+    renderSnake(ctx, [fp, ...P.slice(a + 1)], sk, S, dir, now, {dead: false, noHead: true, off: a, total: P.length, moves});
+  }
+  let live = 0;
+  ctx.save();
+  C.dust.forEach(d => {
+    const age = el - d.born;
+    if (age > d.life) return;
+    live++;
+    const k = age / d.life, s = d.sz * (1 - .4 * k);
+    ctx.globalAlpha = Math.pow(1 - k, 1.5) * d.a; ctx.fillStyle = d.c;
+    ctx.fillRect(d.ox + d.vx * age + Math.sin(age / 180 + d.ph) * 2 - s / 2, d.oy + d.vy * age + .00002 * age * age - s / 2, s, s);
+  });
+  ctx.restore();
+  return f < last || live > 0;
+}
+function drawSparks() {
+  sparks.forEach(s => { s.x += s.vx; s.y += s.vy; s.l -= .04;
+    ctx.fillStyle = `rgba(${s.c[0]},${s.c[1]},${s.c[2]},${Math.max(0, s.l)})`; ctx.beginPath(); ctx.arc(s.x, s.y, 2.2, 0, 7); ctx.fill(); });
+  for (let i = sparks.length - 1; i >= 0; i--) if (sparks[i].l <= 0) sparks.splice(i, 1);
+}
+
+/* ---------- магазин ---------- */
+let shopOpen = false, shopTab = 'S', previews = [];
+const shopEl = document.getElementById('shop'), grid = document.getElementById('grid');
+function previewPts() { const p = []; for (let j = 0; j < 13; j++) p.push([122 - j * 8.5, 42 + 9 * Math.sin(j * .75)]); return p; }
+function shopData() {
+  return shopTab === 'S' ? {list: SNAKES, own: save.ownS, key: 'S'} : shopTab === 'A' ? {list: APPLES, own: save.ownA, key: 'A'} : {list: BGS, own: save.ownB, key: 'B'};
+}
+function drawPreview(p, now) {
+  const c = p.cv.getContext('2d');
+  if (shopTab === 'B') { drawBg(c, 140, 84, p.i, p.parts, now); return; }
+  const g = c.createRadialGradient(70, 42, 5, 70, 42, 90); g.addColorStop(0, '#16323a'); g.addColorStop(1, '#0a121c');
+  c.fillStyle = g; c.fillRect(0, 0, 140, 84);
+  if (shopTab === 'S') renderSnake(c, previewPts(), SNAKES[p.i], 13, {x: 1, y: 0}, now, {tongue: true, moves: 0});
+  else drawApple(c, p.i, 70, 42, 22 * (1 + .06 * Math.sin(now / 220)), now);
+}
+function renderShop() {
+  document.getElementById('shopCoins').textContent = save.coins;
+  grid.innerHTML = ''; previews = [];
+  const D = shopData(), list = D.list, own = D.own, sel = save['sel' + D.key];
+  list.forEach((it, i) => {
+    const card = document.createElement('div'); card.className = 'card' + (i === sel ? ' sel' : '');
+    const c = document.createElement('canvas'); c.width = 140; c.height = 84;
+    const name = document.createElement('div'); name.className = 'name'; name.textContent = it.n;
+    const b = document.createElement('button');
+    if (i === sel) { b.textContent = 'Выбрано'; b.className = 'own'; b.disabled = true; }
+    else if (own.includes(i)) { b.textContent = 'Выбрать'; b.className = 'own'; b.onclick = () => choose(i); }
+    else { b.textContent = '🍎 ' + it.p; if (save.coins < it.p) b.className = 'cant'; b.onclick = () => buy(i); }
+    card.append(c, name, b); grid.append(card); previews.push({cv: c, i, parts: shopTab === 'B' ? makeParts(i, 140, 84) : null});
+  });
+}
+function choose(i) {
+  save['sel' + shopData().key] = i;
+  if (shopTab === 'B') { parts = makeParts(i, 400, 400); applyPageBg(); }
+  persist(true); renderShop();
+}
+function buy(i) {
+  const it = shopData().list[i];
+  if (save.coins < it.p) { haptic('error'); return; }
+  save.coins -= it.p; shopData().own.push(i);
+  haptic('success'); refreshUI(); choose(i);
+}
+function openShop() { shopOpen = true; shopEl.classList.add('open'); renderShop(); }
+function closeShop() { shopOpen = false; shopEl.classList.remove('open'); }
+document.getElementById('shopBtn').onclick = openShop;
+document.getElementById('closeShop').onclick = closeShop;
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => {
+  shopTab = b.dataset.t;
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === b));
+  grid.scrollTop = 0; renderShop();
+});
+
+/* ---------- цикл и управление ---------- */
+function frame(now) {
+  if (alive && !paused) {
+    if (now - lastTick > STEP * 4) lastTick = now - STEP;
+    while (alive && now - lastTick >= STEP) { lastTick += STEP; tick(); }
+  }
+  background(now);
+  if (snake) {
+    const A = save.selA, p = 1 + .08 * Math.sin(now / 220);
+    drawApple(ctx, A, cx(food), cy(food), S * .38 * p, now);
+    if (!dead) drawSnake(paused ? pauseAt : now);
+    else if (crumble && !crumble.done) {
+      const el = now - crumble.t0;
+      if (el < CR_PRE) { ctx.save(); ctx.translate((Math.random() - .5) * 3, (Math.random() - .5) * 3); drawSnake(now); ctx.restore(); }
+      else if (!drawCrumble(el - CR_PRE, now)) crumble.done = true;
+    }
+  }
+  drawSparks();
+  if (shopOpen) previews.forEach(p => drawPreview(p, now));
+  requestAnimationFrame(frame);
+}
+function turn(x, y) {
+  if (paused) return;
+  const ref = q.length ? q[q.length - 1] : dir;
+  if ((x === ref.x && y === ref.y) || (x === -ref.x && y === -ref.y)) return;
+  if (q.length < 3) q.push({x, y});
+}
+let t0;
+addEventListener('touchstart', e => { t0 = e.touches[0]; }, {passive: true});
+addEventListener('touchend', e => {
+  if (!t0 || !alive || shopOpen || save.ctrl === 'arrows') return;
+  const dx = e.changedTouches[0].clientX - t0.clientX, dy = e.changedTouches[0].clientY - t0.clientY;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) return;
+  if (Math.abs(dx) > Math.abs(dy)) turn(dx > 0 ? 1 : -1, 0); else turn(0, dy > 0 ? 1 : -1);
+});
+addEventListener('keydown', e => {
+  if (shopOpen) { if (e.code === 'Escape') closeShop(); return; }
+  if (editMode) { if (['Escape', 'Enter'].includes(e.code)) endEdit(); return; }
+  if (alive && (e.code === 'KeyP' || e.code === 'Escape')) { setPause(!paused); return; }
+  if (['Space', 'Enter'].includes(e.code)) { e.preventDefault(); if (!alive) start(); else if (paused) setPause(false); return; }
+  if (e.code === 'KeyM' && !alive) { openShop(); return; }
+  const m = {ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+    KeyW: [0, -1], KeyS: [0, 1], KeyA: [-1, 0], KeyD: [1, 0]}[e.code];
+  if (m) { e.preventDefault(); if (alive) turn(...m); }
+});
+document.getElementById('restart').onclick = start;
+function ctrlHint() { return save.ctrl === 'arrows' ? 'Жми стрелки, чтобы двигаться' : 'Свайпай, чтобы двигаться'; }
+function applyCtrl() {
+  document.body.classList.toggle('arrows', save.ctrl === 'arrows');
+  document.getElementById('ctrlBtn').textContent = 'Управление: ' + (save.ctrl === 'arrows' ? 'стрелки' : 'свайпы');
+  applyDpad(); updateDpadState();
+  if (!dead && !editMode && !alive) document.getElementById('msg').textContent = ctrlHint();
+}
+document.getElementById('ctrlBtn').onclick = () => { save.ctrl = save.ctrl === 'arrows' ? 'swipe' : 'arrows'; persist(true); applyCtrl(); };
+document.querySelectorAll('#dpad button').forEach(b => b.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  if (!alive || editMode) return;
+  const [x, y] = b.dataset.d.split(',').map(Number); turn(x, y);
+}));
+
+/* ---------- настройка стрелок ---------- */
+let editMode = false, drag = null, selKey = 'u';
+const dpad = document.getElementById('dpad'), dpadEdit = document.getElementById('dpadEdit'), dpadSize = document.getElementById('dpadSize');
+const kb = {}; document.querySelectorAll('#dpad button').forEach(b => kb[b.dataset.k] = b);
+function applyDpad() {
+  for (const k in kb) {
+    const d = save.keys[k], b = kb[k];
+    b.style.left = d.x * 100 + '%'; b.style.top = d.y * 100 + '%';
+    b.style.transform = `translate(-50%,-50%) scale(${d.s})`;
+    b.classList.toggle('sel', editMode && k === selKey);
+  }
+}
+// стрелки видны только в игре и при настройке, в меню прячутся вниз экрана
+function updateDpadState() { dpad.classList.toggle('rest', !(alive || editMode)); }
+function clampKey(k) {
+  const W = innerWidth, H = innerHeight, d = save.keys[k], hw = 33 * d.s, hh = 29 * d.s;
+  d.x = Math.min(Math.max(d.x * W, hw), Math.max(hw, W - hw)) / W;
+  d.y = Math.min(Math.max(d.y * H, hh), Math.max(hh, H - hh)) / H;
+}
+function selectKey(k) {
+  selKey = k; dpadSize.value = Math.round(save.keys[k].s * 100);
+  document.getElementById('dpadSel').textContent = kb[k].textContent; applyDpad();
+}
+function startEdit() {
+  editMode = true; dpad.classList.add('edit'); dpadEdit.classList.add('on'); btns.style.display = 'none';
+  updateDpadState();
+  document.getElementById('msg').textContent = 'Перетащи любую стрелку, ползунок меняет размер выбранной';
+  selectKey(selKey);
+}
+function endEdit() {
+  editMode = false; dpad.classList.remove('edit'); dpadEdit.classList.remove('on'); btns.style.display = '';
+  updateDpadState();
+  persist(true); applyCtrl();
+}
+document.getElementById('dpadBtn').onclick = startEdit;
+document.getElementById('dpadDone').onclick = endEdit;
+document.getElementById('dpadReset').onclick = () => { save.keys = defKeys(.5, .86, 1); selectKey(selKey); persist(false); };
+document.getElementById('dpadAll').onclick = () => {
+  const s = save.keys[selKey].s;
+  for (const k in kb) { save.keys[k].s = s; clampKey(k); }
+  applyDpad(); persist(false);
+};
+dpadSize.oninput = () => { save.keys[selKey].s = dpadSize.value / 100; clampKey(selKey); applyDpad(); persist(false); };
+Object.entries(kb).forEach(([k, b]) => {
+  b.addEventListener('pointerdown', e => {
+    if (!editMode) return;
+    e.preventDefault(); selectKey(k);
+    drag = {k, dx: e.clientX - save.keys[k].x * innerWidth, dy: e.clientY - save.keys[k].y * innerHeight};
+    b.setPointerCapture(e.pointerId);
+  });
+  b.addEventListener('pointermove', e => {
+    if (!drag || drag.k !== k) return;
+    save.keys[k].x = (e.clientX - drag.dx) / innerWidth; save.keys[k].y = (e.clientY - drag.dy) / innerHeight;
+    clampKey(k); applyDpad();
+  });
+  ['pointerup', 'pointercancel'].forEach(n => b.addEventListener(n, () => { if (drag) { drag = null; persist(false); } }));
+});
+addEventListener('resize', () => { for (const k in kb) clampKey(k); applyDpad(); });
+/* ---------- пауза ---------- */
+const pauseEl = document.getElementById('pause'), pauseBtn = document.getElementById('pauseBtn');
+function updatePauseBtn() { pauseBtn.style.display = alive && !paused ? 'flex' : 'none'; }
+function setPause(on) {
+  if (!alive || on === paused) return;
+  paused = on;
+  if (on) { pauseAt = performance.now(); pauseEl.classList.add('on'); }
+  else { lastTick += performance.now() - pauseAt; pauseEl.classList.remove('on'); }
+  updatePauseBtn();
+}
+pauseBtn.onclick = () => setPause(true);
+document.getElementById('resumeBtn').onclick = () => setPause(false);
+document.getElementById('quitBtn').onclick = () => { if (alive) { paused = false; pauseEl.classList.remove('on'); gameOver(); } };
+addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
+try { tg.onEvent('deactivated', () => setPause(true)); } catch (e) {}
+applyCtrl();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
